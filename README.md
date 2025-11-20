@@ -54,11 +54,11 @@ int main() {
 ## OUTPUT
 $ ./sem.o 
 
-![5a](https://github.com/user-attachments/assets/7af8c51d-4acc-48f4-9d47-77bf4c72849f)
+![Alt text](imgss/img1.png)
 
 $ ipcs
 
-![5b](https://github.com/user-attachments/assets/58451a53-f974-475a-a9bc-6b4a25d7bf67)
+![Alt text](imgss/img2.png)
 
 # RESULT:
 The program is executed successfully.
