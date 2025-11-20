@@ -1,100 +1,64 @@
+# EXPERIMENT 05 LINUX IPC SEMAPHORES
+## DEVELOPED BY : RATHISH R
+## REGISTER NO. : 212224240132
+# AIM:
+To Write a C program that implements a producer-consumer system with two processes using Semaphores.
+# DESIGN STEPS:
+### Step 1:
+Navigate to any Linux environment installed on the system or installed inside a virtual environment like virtual box/vmware or online linux JSLinux (https://bellard.org/jslinux/vm.html?url=alpine-x86.cfg&mem=192) or docker.
+### Step 2:
+Write the C Program using Linux Process API - Sempahores
+### Step 3:
+Execute the C Program for the desired output. 
+# PROGRAM:
+## Write a C program that implements a producer-consumer system with two processes using Semaphores.
+```
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/wait.h>
-#include <time.h>
-
-#define NUM_LOOPS 10  // Number of producer-consumer cycles
-
-// Define union semun if not already available
-union semun {
-    int val;
-    struct semid_ds *buf;
-    unsigned short int *array;
-    struct seminfo *__buf;
-};
-
-// Function to wait (P operation) on semaphore
-void wait_semaphore(int sem_set_id) {
-    struct sembuf sem_op;
-    sem_op.sem_num = 0;
-    sem_op.sem_op = -1;   // Decrease semaphore value (Wait)
-    sem_op.sem_flg = 0;
-    if (semop(sem_set_id, &sem_op, 1) == -1) {
-        perror("semop wait");
-        exit(1);
-    }
-}
-
-// Function to signal (V operation) on semaphore
-void signal_semaphore(int sem_set_id) {
-    struct sembuf sem_op;
-    sem_op.sem_num = 0;
-    sem_op.sem_op = 1;    // Increase semaphore value (Signal)
-    sem_op.sem_flg = 0;
-    if (semop(sem_set_id, &sem_op, 1) == -1) {
-        perror("semop signal");
-        exit(1);
-    }
-}
 
 int main() {
-    int sem_set_id;
-    union semun sem_val;
-    int child_pid;
+    int semid = semget(IPC_PRIVATE, 1, 0600);
+    if (semid == -1) { perror("semget"); exit(1); }
+    printf("Semaphore created, id = %d\n", semid);
 
-    // Create a semaphore set with one semaphore
-    sem_set_id = semget(IPC_PRIVATE, 1, 0600);
-    if (sem_set_id == -1) {
-        perror("semget");
-        exit(1);
-    }
-    printf("Semaphore set created, semaphore set id '%d'.\n", sem_set_id);
+    union semun { int val; } arg;
+    arg.val = 0;
+    semctl(semid, 0, SETVAL, arg);
 
-    // Initialize semaphore to 0 (Consumer must wait for Producer)
-    sem_val.val = 0;
-    if (semctl(sem_set_id, 0, SETVAL, sem_val) == -1) {
-        perror("semctl");
-        exit(1);
-    }
-
-    // Fork a child process
-    child_pid = fork();
-    if (child_pid < 0) {
-        perror("fork");
-        exit(1);
-    }
-
-    if (child_pid == 0) { 
-        // CHILD PROCESS: Consumer
-        for (int i = 0; i < NUM_LOOPS; i++) {
-            wait_semaphore(sem_set_id);  // Wait for producer
-            printf("Consumer: '%d'\n", i);
+    if (fork() == 0) { // Child = consumer
+        for (int i = 0; i < 10; i++) {
+            struct sembuf p = {0, -1, 0}; // wait
+            semop(semid, &p, 1);
+            printf("consumer: %d\n", i);
             fflush(stdout);
         }
         exit(0);
-    } else {
-        // PARENT PROCESS: Producer
-        for (int i = 0; i < NUM_LOOPS; i++) {
-            printf("Producer: '%d'\n", i);
+    } else { // Parent = producer
+        for (int i = 0; i < 10; i++) {
+            printf("producer: %d\n", i);
             fflush(stdout);
-            signal_semaphore(sem_set_id);  // Signal consumer
-            usleep(500000);  // Sleep to allow consumer to process
+            struct sembuf v = {0, 1, 0}; // signal
+            semop(semid, &v, 1);
+            usleep(100000); // small delay
         }
-
-        // Wait for child to finish
         wait(NULL);
-
-        // Remove the semaphore set
-        if (semctl(sem_set_id, 0, IPC_RMID, sem_val) == -1) {
-            perror("semctl remove");
-            exit(1);
-        }
+        semctl(semid, 0, IPC_RMID, arg);
         printf("Semaphore removed.\n");
     }
-
-    return 0;
 }
+```
+## OUTPUT
+$ ./sem.o 
+
+![Alt text](imgss/img1.png)
+
+$ ipcs
+
+![Alt text](imgss/img2.png)
+
+# RESULT:
+The program is executed successfully.
